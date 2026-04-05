@@ -429,24 +429,32 @@ let incomeList = load('kh2_income', [
 ]);
 
 const historyData = [
-  { month: 'Jan–Feb 2025', ym: '2025-01', total: 1136, items: [
-    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Supermarket',a:325.79,c:'🛒 Groceries'},
-    {n:'Terrea',a:77,c:'🔧 Utilities'},{n:'Lifestyle',a:179,c:'🎉 Lifestyle'},{n:'Garbage',a:36,c:'🔧 Utilities'}
-  ]},
-  { month: 'Feb–Mar 2025', ym: '2025-02', total: 1167, items: [
-    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:140,c:'🔧 Utilities'},{n:'Groceries',a:160,c:'🛒 Groceries'},
-    {n:'Zara gift',a:23,c:'🎉 Lifestyle'},{n:'Parfume',a:45,c:'📦 Shopping'},{n:'Drone',a:213,c:'📦 Shopping'},
-    {n:'DB',a:56,c:'🚆 Transport'},{n:'Parties',a:62,c:'🎉 Lifestyle'}
-  ]},
-  { month: 'Oct–Nov 2025', ym: '2025-10', total: 1504, items: [
+  { month: 'Nov 2025', ym: '2025-11', total: 1504, items: [
     {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Supermarket',a:243,c:'🛒 Groceries'},
     {n:'Weed',a:128,c:'🎉 Lifestyle'},{n:'DB',a:88,c:'🚆 Transport'},{n:'IQOS',a:62,c:'🎉 Lifestyle'},
     {n:'Personal',a:127,c:'📦 Shopping'},{n:'Visa fees',a:152,c:'📦 Shopping'},{n:'Dry clean',a:60,c:'📦 Shopping'},
     {n:'Amazon',a:70,c:'📦 Shopping'},{n:'Zippo',a:55,c:'📦 Shopping'}
   ]},
   { month: 'Dec 2025', ym: '2025-12', total: 1047.40, items: [
-    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Terrea',a:28,c:'🔧 Utilities'},
-    {n:'Groceries',a:178.40,c:'🛒 Groceries'},{n:'Weed/Lotto',a:198,c:'🎉 Lifestyle'},{n:'Bar & Gifts',a:66,c:'🎉 Lifestyle'},{n:'DB',a:58,c:'🚆 Transport'}
+    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Terrea',a:28,c:'🎉 Lifestyle'},
+    {n:'Groceries',a:178.40,c:'🛒 Groceries'},{n:'Weed/Gizeh/Lotto',a:198,c:'🎉 Lifestyle'},
+    {n:'Glühwein/Bar/Gift/Jäger',a:66,c:'🍔 Food & Drinks'},{n:'DB',a:58,c:'🚆 Transport'}
+  ]},
+  { month: 'Jan 2026', ym: '2026-01', total: 1077, items: [
+    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Supermarket',a:252.50,c:'🛒 Groceries'},
+    {n:'DB',a:63,c:'🚆 Transport'},{n:'Vodafone',a:20,c:'🔧 Utilities'},{n:'Terrea/Snus/Weed',a:137.50,c:'🎉 Lifestyle'},
+    {n:'Burger/Whiskey/Kebab',a:62,c:'🍔 Food & Drinks'},{n:'ChatGPT',a:23,c:'📦 Shopping'}
+  ]},
+  { month: 'Feb 2026', ym: '2026-02', total: 1136, items: [
+    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Supermarket',a:325.79,c:'🛒 Groceries'},
+    {n:'Terrea',a:77,c:'🎉 Lifestyle'},{n:'Lifestyle',a:179,c:'🎉 Lifestyle'},{n:'Garbage',a:36,c:'🔧 Utilities'}
+  ]},
+  { month: 'Mar 2026', ym: '2026-03', total: 1286, items: [
+    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:140,c:'🔧 Utilities'},{n:'Groceries',a:173,c:'🛒 Groceries'},
+    {n:'Drone',a:213,c:'📦 Shopping'},{n:'Parfume',a:45,c:'📦 Shopping'},{n:'Shampoo/Razor',a:66,c:'📦 Shopping'},
+    {n:'SD Card',a:23,c:'📦 Shopping'},{n:'Joel',a:70,c:'🎉 Lifestyle'},{n:'Zara gift',a:23,c:'🎉 Lifestyle'},
+    {n:'Parties',a:42,c:'🎉 Lifestyle'},{n:'Lotto',a:24,c:'🎉 Lifestyle'},{n:'Terrea',a:21,c:'🎉 Lifestyle'},
+    {n:'DB',a:48,c:'🚆 Transport'},{n:'Vodafone',a:10,c:'🔧 Utilities'},{n:'Kebab Treff',a:8,c:'🍔 Food & Drinks'}
   ]},
 ];
 
@@ -462,7 +470,39 @@ function catLabel(cat) { if(!cat) return 'Other'; return cat.split(' ').slice(1)
 function fmt(n) { return '€' + Math.abs(n).toFixed(2); }
 function fmtINR(n) { return '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN'); }
 
-// Check & apply recurring expenses
+// Auto-archive previous month when new month starts
+function autoArchivePreviousMonth() {
+  const now = new Date();
+  const currentYm = getNow();
+  const lastArchivedKey = 'kh2_last_archived';
+  const lastArchived = load(lastArchivedKey, null);
+  if(lastArchived === currentYm) return;
+
+  // Find expenses from previous month
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevYm = prevDate.getFullYear() + '-' + String(prevDate.getMonth() + 1).padStart(2, '0');
+  const prevMonthLabel = prevDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  const prevExpenses = expenses.filter(e => e.date && e.date.startsWith(prevYm));
+
+  if(prevExpenses.length > 0) {
+    const alreadyArchived = historyData.find(h => h.ym === prevYm);
+    if(!alreadyArchived) {
+      const total = prevExpenses.reduce((s, e) => s + e.amount, 0);
+      const catMap = {};
+      prevExpenses.forEach(e => {
+        const k = e.cat || '❓ Other';
+        if(!catMap[k]) catMap[k] = { n: catLabel(k), a: 0, c: k };
+        catMap[k].a += e.amount;
+      });
+      const items = Object.values(catMap).map(v => ({ n: v.n, a: parseFloat(v.a.toFixed(2)), c: v.c }));
+      historyData.push({ month: prevMonthLabel, ym: prevYm, total: parseFloat(total.toFixed(2)), items });
+      save('kh2_history', historyData);
+    }
+  }
+  save(lastArchivedKey, currentYm);
+}
+
+
 function applyRecurring() {
   const ym = getNow();
   const recurringKey = 'kh2_recurring_applied_' + ym;
@@ -672,7 +712,8 @@ function renderInsights() {
   const cur = thisMonth();
   const spent = cur.reduce((s,e)=>s+e.amount,0);
   const pct = spent/BUDGET*100;
-  const lastHist = historyData[0];
+  const sortedHist = [...historyData].sort((a,b) => b.ym.localeCompare(a.ym));
+  const lastHist = sortedHist[0];
   const prevSpent = lastHist.total;
   const diff = spent - prevSpent;
   const now = new Date();
@@ -907,8 +948,15 @@ function delOwed(id) {
   toast('Removed');
 }
 
+// Merge saved history with hardcoded
+const savedHistory = load('kh2_history', []);
+savedHistory.forEach(h => {
+  if(!historyData.find(x => x.ym === h.ym)) historyData.push(h);
+});
+
 document.getElementById('add-date').value = new Date().toISOString().split('T')[0];
 
+autoArchivePreviousMonth();
 applyRecurring();
 renderAll();
 </script>
