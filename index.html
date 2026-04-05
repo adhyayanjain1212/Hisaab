@@ -137,6 +137,16 @@ body { display: flex; flex-direction: column; }
 .exp-amount.recurring { color: var(--blue); }
 .del-btn { font-size: 18px; color: var(--text3); cursor: pointer; line-height: 1; padding: 1px 4px; border-radius: 5px; }
 .del-btn:active { background: var(--red-light); color: var(--red); }
+.edit-btn { font-size: 13px; color: var(--text3); cursor: pointer; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border2); background: var(--surface2); font-family: var(--font); font-weight: 500; }
+.edit-btn:active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+/* EDIT MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 20px 18px 36px; width: 100%; max-height: 85vh; overflow-y: auto; }
+.modal-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 14px; }
+.btn-cancel { flex: 1; background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 13px; font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; }
 .recurring-badge { font-size: 9px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; background: var(--blue-light); color: var(--blue); padding: 2px 6px; border-radius: 10px; }
 
 /* FORM */
@@ -339,6 +349,10 @@ input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.4; }
           </div>
         </div>
         <button class="btn-primary" onclick="addOwed()">Add</button>
+        <div class="form-group" style="margin-top:10px;">
+          <label class="form-label">Note (optional)</label>
+          <input type="text" id="owed-note" placeholder="e.g. borrowed for drone, split dinner..." />
+        </div>
       </div>
     </div>
   </div>
@@ -404,6 +418,48 @@ input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.4; }
   <button class="nav-btn" onclick="showScreen('insights',this)"><span class="nav-icon">📊</span>Insights</button>
   <button class="nav-btn" onclick="showScreen('settings',this)"><span class="nav-icon">⚙️</span>Settings</button>
 </nav>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">Edit expense</div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input type="text" id="edit-name" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Amount (€)</label>
+        <input type="number" id="edit-amount" step="0.01" min="0" inputmode="decimal" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" id="edit-date" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select id="edit-cat">
+        <option value="🛒 Groceries">🛒 Groceries</option>
+        <option value="🏠 Rent">🏠 Rent</option>
+        <option value="🚆 Transport">🚆 Transport</option>
+        <option value="🍔 Food & Drinks">🍔 Food & Drinks</option>
+        <option value="🎉 Lifestyle">🎉 Lifestyle</option>
+        <option value="💊 Health">💊 Health</option>
+        <option value="📦 Shopping">📦 Shopping</option>
+        <option value="🔧 Utilities">🔧 Utilities</option>
+        <option value="❓ Other">❓ Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Note (optional)</label>
+      <textarea id="edit-note"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEdit()">Cancel</button>
+      <button class="btn-primary" style="flex:2;" onclick="saveEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -660,7 +716,10 @@ function renderAddScreen() {
       </div>
       <div class="exp-right">
         <div class="exp-amount">${fmt(e.amount)}</div>
-        <div class="del-btn" onclick="delExp(${e.id})">×</div>
+        <div style="display:flex;gap:5px;margin-top:2px;">
+          <div class="edit-btn" onclick="openEdit(${e.id})">edit</div>
+          <div class="del-btn" onclick="delExp(${e.id})">×</div>
+        </div>
       </div>
     </div>`).join('');
 }
@@ -680,12 +739,13 @@ function renderCollect() {
   const el = document.getElementById('owed-list');
   if(!owedList.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">No entries yet</div></div>'; return; }
   el.innerHTML = owedList.map(o => `
-    <div class="owed-item">
+    <div class="owed-item" style="align-items:flex-start;">
       <div class="owed-left">
         <div class="owed-avatar">${o.name[0].toUpperCase()}</div>
         <div>
           <div class="owed-name">${o.name}</div>
           <div class="owed-cur">${o.currency}</div>
+          ${o.note ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;font-style:italic;max-width:140px;">${o.note}</div>` : ''}
         </div>
       </div>
       <div class="owed-right">
@@ -916,6 +976,40 @@ function addExpense() {
   renderAll();
 }
 
+let editingId = null;
+
+function openEdit(id) {
+  const e = expenses.find(x => x.id === id);
+  if(!e) return;
+  editingId = id;
+  document.getElementById('edit-name').value = e.name;
+  document.getElementById('edit-amount').value = e.amount;
+  document.getElementById('edit-date').value = e.date;
+  document.getElementById('edit-cat').value = e.cat || '❓ Other';
+  document.getElementById('edit-note').value = e.note || '';
+  document.getElementById('edit-modal').classList.add('show');
+}
+
+function closeEdit() {
+  editingId = null;
+  document.getElementById('edit-modal').classList.remove('show');
+}
+
+function saveEdit() {
+  const name = document.getElementById('edit-name').value.trim();
+  const amount = parseFloat(document.getElementById('edit-amount').value);
+  const date = document.getElementById('edit-date').value;
+  const cat = document.getElementById('edit-cat').value;
+  const note = document.getElementById('edit-note').value.trim();
+  if(!name || isNaN(amount) || amount <= 0 || !date) { toast('Fill all fields'); return; }
+  const e = expenses.find(x => x.id === editingId);
+  if(e) { e.name = name; e.amount = amount; e.date = date; e.cat = cat; e.note = note || null; }
+  save('kh2_expenses', expenses);
+  closeEdit();
+  toast('Updated ✓');
+  renderAll();
+}
+
 function delExp(id) {
   expenses = expenses.filter(e => e.id !== id);
   save('kh2_expenses', expenses);
@@ -927,11 +1021,13 @@ function addOwed() {
   const name = document.getElementById('owed-name').value.trim();
   const amount = parseFloat(document.getElementById('owed-amt').value);
   const currency = document.getElementById('owed-curr').value;
+  const note = document.getElementById('owed-note').value.trim();
   if(!name||isNaN(amount)||amount<=0) { toast('Please fill all fields'); return; }
-  owedList.push({ id: Date.now(), name, amount, currency, received: false });
+  owedList.push({ id: Date.now(), name, amount, currency, note: note||null, received: false });
   save('kh2_owed', owedList);
   document.getElementById('owed-name').value = '';
   document.getElementById('owed-amt').value = '';
+  document.getElementById('owed-note').value = '';
   renderCollect();
   toast('Added ✓');
 }
