@@ -416,11 +416,39 @@ function load(k, def) { try { const v = localStorage.getItem(k); return v ? JSON
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
 
 let expenses = load('kh2_expenses', []);
-let owedList = load('kh2_owed', []);
-let budgetHistory = load('kh2_budget_history', []);
-let incomeList = load('kh2_income', []);
+let owedList = load('kh2_owed', [
+  { id: 1, name: 'Father', amount: 1000000, currency: 'INR', received: false },
+  { id: 2, name: 'Mother', amount: 12000, currency: 'INR', received: false },
+  { id: 3, name: 'Brother', amount: 10000, currency: 'INR', received: false },
+]);
+let budgetHistory = load('kh2_budget_history', [
+  { id: 1, amount: 992, label: 'Student stipend', date: '2025-01', active: false },
+]);
+let incomeList = load('kh2_income', [
+  { id: 1, source: 'HFU stipend', amount: 992 },
+]);
 
-const historyData = [];
+const historyData = [
+  { month: 'Jan–Feb 2025', ym: '2025-01', total: 1136, items: [
+    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Supermarket',a:325.79,c:'🛒 Groceries'},
+    {n:'Terrea',a:77,c:'🔧 Utilities'},{n:'Lifestyle',a:179,c:'🎉 Lifestyle'},{n:'Garbage',a:36,c:'🔧 Utilities'}
+  ]},
+  { month: 'Feb–Mar 2025', ym: '2025-02', total: 1167, items: [
+    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:140,c:'🔧 Utilities'},{n:'Groceries',a:160,c:'🛒 Groceries'},
+    {n:'Zara gift',a:23,c:'🎉 Lifestyle'},{n:'Parfume',a:45,c:'📦 Shopping'},{n:'Drone',a:213,c:'📦 Shopping'},
+    {n:'DB',a:56,c:'🚆 Transport'},{n:'Parties',a:62,c:'🎉 Lifestyle'}
+  ]},
+  { month: 'Oct–Nov 2025', ym: '2025-10', total: 1504, items: [
+    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Supermarket',a:243,c:'🛒 Groceries'},
+    {n:'Weed',a:128,c:'🎉 Lifestyle'},{n:'DB',a:88,c:'🚆 Transport'},{n:'IQOS',a:62,c:'🎉 Lifestyle'},
+    {n:'Personal',a:127,c:'📦 Shopping'},{n:'Visa fees',a:152,c:'📦 Shopping'},{n:'Dry clean',a:60,c:'📦 Shopping'},
+    {n:'Amazon',a:70,c:'📦 Shopping'},{n:'Zippo',a:55,c:'📦 Shopping'}
+  ]},
+  { month: 'Dec 2025', ym: '2025-12', total: 1047.40, items: [
+    {n:'Rent',a:380,c:'🏠 Rent'},{n:'Insurance',a:139,c:'🔧 Utilities'},{n:'Terrea',a:28,c:'🔧 Utilities'},
+    {n:'Groceries',a:178.40,c:'🛒 Groceries'},{n:'Weed/Lotto',a:198,c:'🎉 Lifestyle'},{n:'Bar & Gifts',a:66,c:'🎉 Lifestyle'},{n:'DB',a:58,c:'🚆 Transport'}
+  ]},
+];
 
 function getNow() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function getMonthLabel(ym) {
